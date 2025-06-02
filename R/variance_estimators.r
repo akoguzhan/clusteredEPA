@@ -14,7 +14,7 @@ EWC <- function(X, lrv_par = NULL) {
   P <- NCOL(X)
   
   # Rule of thumb: sqrt(Tobs) harmonics if not specified
-  if (is.null(lrv_par)) lrv_par <- floor(Tobs^0.5)
+  if (is.null(lrv_par)) lrv_par <- Tobs
   if (lrv_par < 1 || lrv_par > Tobs) stop("lrv_par must be between 1 and Tobs.")
   
   if (lrv_par == Tobs) {
@@ -51,7 +51,7 @@ NeweyWest <- function(X, lrv_par = NULL) {
   P <- NCOL(X)
   
   if (Tobs < 2) stop("Not enough observations.")
-  if (is.null(lrv_par)) lrv_par <- floor(4 * (Tobs / 100)^(2/9))
+  if (is.null(lrv_par)) lrv_par <- 0
   if (lrv_par >= Tobs) stop("lrv_par must be less than the number of observations.")
   
   # Demean

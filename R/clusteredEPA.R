@@ -43,7 +43,7 @@ clusteredEPA <- function(df, DL, H = NULL, id, time, test = "epa_clustered_selec
   } else if (test == "epa_clustered_known") {
     res <- epa_clustered_known(Z = Z, id = id_vec, time = time_vec, ...)
   } else if (test == "epa_clustered_split") {
-    res <- epa_clustered_split(df = df, id = id, time = time, Z_names = colnames(Z), ...)
+    res <- epa_clustered_split(df = df, id = id_vec, time = time_vec, Z_names = colnames(Z), ...)
   } else if (test == "epa_clustered_selective") {
     res <- epa_clustered_selective(Z = Z, id = id_vec, time = time_vec, ...)
   } else {
