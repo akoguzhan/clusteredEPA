@@ -1,0 +1,12 @@
+Package: clusteredEPA
+Type: Package
+Title: Clustered EPA with Unknown Clusters
+Version: 0.1.0
+Authors@R: person("Oguzhan", "Akgun", email = "Oguzhan.Akgun@u-bourgogne.fr", role = c("aut", "cre"))
+Description: Testing clustered equal predictive ability with unknown clusters
+Depends: R (>= 3.5.0)
+Imports:
+    PanelKmeansInference
+License: MIT
+Encoding: UTF-8
+LazyData: true
