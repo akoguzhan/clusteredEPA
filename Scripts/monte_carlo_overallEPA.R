@@ -11,7 +11,9 @@ library(doSNOW)
 # === Simulation parameters ===
 N_set <- c(80, 120, 160, 200)
 T_eval_set <- c(20, 50, 100, 150)
-n_sim <- 10
+N_set <- c(80)
+T_eval_set <- c(20)
+n_sim <- 100
 burn <- 50
 lrv <- "EWC"
 lrv_par <- NULL
@@ -85,7 +87,7 @@ for (n_idx in seq_along(N_set)) {
           gamma,
           phi = 0.2,
           lambda = 0.2,
-          delta_vec = 0 * c(-0.3, -0.1, 0.2)
+          delta_vec = c(0.1, 0.2, 0.3)
         )
       }, error = function(e) {
         sim_error_log[["generate_forecast_simulation_data"]] <<- e$message
@@ -108,40 +110,40 @@ for (n_idx in seq_along(N_set)) {
       cond_mat <- matrix(cond_var, ncol = 1)
 
       # === Overall EPA Test ===
-      res_epa <- tryCatch({
+      res_unc_oepa_known <- tryCatch({
         overall_EPA_test(Z = DL, id = id_vec, time = time_vec, lrv = lrv, lrv_par = lrv_par)
       }, error = function(e) {
         sim_error_log[["overall_EPA_test"]] <<- e$message
         return(list(p_oepa = NA))
       })
-      rej_epa <- as.numeric(!is.na(res_epa$p_oepa) && res_epa$p_oepa <= 0.05)
-
-      # === Clustered EPA Test ===
-      res_clus <- tryCatch({
-        epa_clustered_known(Z = DL, id = id_vec, time = time_vec, gamma = gamma, lrv = lrv, lrv_par = lrv_par)
-      }, error = function(e) {
-        sim_error_log[["epa_clustered_known"]] <<- e$message
-        return(list(pval = NA))
-      })
-      rej_clus <- as.numeric(!is.na(res_clus$pval) && res_clus$pval <= 0.05)
-
+      rej_unc_oepa_known <- as.numeric(!is.na(res_unc_oepa_known$p_oepa) && res_unc_oepa_known$p_oepa <= 0.05)
+      
       # === Conditional Overall EPA Test ===
-      res_epa_cond <- tryCatch({
+      res_cond_oepa_known <- tryCatch({
         overall_EPA_test(Z = cbind(DL, DL*cond_mat), id = id_vec, time = time_vec, lrv = lrv, lrv_par = lrv_par)
       }, error = function(e) {
         sim_error_log[["overall_EPA_test_cond"]] <<- e$message
         return(list(p_oepa = NA))
       })
-      rej_epa_cond <- as.numeric(!is.na(res_epa_cond$p_oepa) && res_epa_cond$p_oepa <= 0.05)
+      rej_cond_oepa_known <- as.numeric(!is.na(res_cond_oepa_known$p_oepa) && res_cond_oepa_known$p_oepa <= 0.05)
+
+      # === Clustered EPA Test ===
+      res_unc_cepa_known <- tryCatch({
+        epa_clustered_known(Z = DL, id = id_vec, time = time_vec, gamma = gamma, lrv = lrv, lrv_par = lrv_par)
+      }, error = function(e) {
+        sim_error_log[["epa_clustered_known"]] <<- e$message
+        return(list(pval = NA))
+      })
+      rej_unc_cepa_known <- as.numeric(!is.na(res_unc_cepa_known$pval) && res_unc_cepa_known$pval <= 0.05)
 
       # === Conditional Clustered EPA Test ===
-      res_clus_cond <- tryCatch({
+      res_cond_cepa_known <- tryCatch({
         epa_clustered_known(Z = cbind(DL, DL*cond_mat), id = id_vec, time = time_vec, gamma = gamma, lrv = lrv, lrv_par = lrv_par)
       }, error = function(e) {
         sim_error_log[["epa_clustered_known_cond"]] <<- e$message
         return(list(pval = NA))
       })
-      rej_clus_cond <- as.numeric(!is.na(res_clus_cond$pval) && res_clus_cond$pval <= 0.05)
+      rej_cond_cepa_known <- as.numeric(!is.na(res_cond_cepa_known$pval) && res_cond_cepa_known$pval <= 0.05)
 
       # === Naive Test: Estimate clusters, then EPA with known clusters ===
       est_gamma <- tryCatch({
@@ -150,32 +152,32 @@ for (n_idx in seq_along(N_set)) {
         sim_error_log[["panel_kmeans_estimation"]] <<- e$message
         return(rep(NA, N))
       })
-      res_naive <- tryCatch({
+      res_unc_cepa_naive <- tryCatch({
         epa_clustered_known(Z = DL, id = id_vec, time = time_vec, gamma = est_gamma, lrv = lrv, lrv_par = lrv_par)
       }, error = function(e) {
         sim_error_log[["epa_clustered_known_naive"]] <<- e$message
         return(list(pval = NA))
       })
-      rej_naive <- as.numeric(!is.na(res_naive$pval) && res_naive$pval <= 0.05)
+      rej_unc_cepa_naive <- as.numeric(!is.na(res_unc_cepa_naive$pval) && res_unc_cepa_naive$pval <= 0.05)
 
       # === Conditional Naive Test ===
-      res_naive_cond <- tryCatch({
+      res_cond_cepa_naive <- tryCatch({
         epa_clustered_known(Z = cbind(DL, DL*cond_mat), id = id_vec, time = time_vec, gamma = est_gamma, lrv = lrv, lrv_par = lrv_par)
       }, error = function(e) {
         sim_error_log[["epa_clustered_known_naive_cond"]] <<- e$message
         return(list(pval = NA))
       })
-      rej_naive_cond <- as.numeric(!is.na(res_naive_cond$pval) && res_naive_cond$pval <= 0.05)
+      rej_cond_cepa_naive <- as.numeric(!is.na(res_cond_cepa_naive$pval) && res_cond_cepa_naive$pval <= 0.05)
 
       # === Split Sample Test ===
-      res_split <- tryCatch({
+      res_unc_cepa_split <- tryCatch({
         epa_clustered_split(df = data.frame(DL = DL, id = id_vec, time = time_vec),
                             id = "id", time = "time", Z_names = "DL", K = 3, lrv = lrv, lrv_par = lrv_par)
       }, error = function(e) {
         sim_error_log[["epa_clustered_split"]] <<- e$message
         return(list(pval = NA))
       })
-      rej_split <- as.numeric(!is.na(res_split$pval) && res_split$pval <= 0.05)
+      rej_unc_cepa_split <- as.numeric(!is.na(res_unc_cepa_split$pval) && res_unc_cepa_split$pval <= 0.05)
 
       # === Conditional Split Sample Test ===
       res_split_cond <- tryCatch({
@@ -185,16 +187,16 @@ for (n_idx in seq_along(N_set)) {
         sim_error_log[["epa_clustered_split_cond"]] <<- e$message
         return(list(pval = NA))
       })
-      rej_split_cond <- as.numeric(!is.na(res_split_cond$pval) && res_split_cond$pval <= 0.05)
+      rej_cond_cepa_split <- as.numeric(!is.na(res_split_cond$pval) && res_split_cond$pval <= 0.05)
 
       # === Selective Inference Test ===
-      res_sel <- tryCatch({
+      res_unc_cepa_sel <- tryCatch({
         epa_clustered_selective(Z = DL, id = id_vec, time = time_vec, K = 3, lrv = lrv, lrv_par = lrv_par)
       }, error = function(e) {
         sim_error_log[["epa_clustered_selective"]] <<- e$message
         return(list(pval = NA))
       })
-      rej_sel <- as.numeric(!is.na(res_sel$pval) && res_sel$pval <= 0.05)
+      rej_unc_cepa_sel <- as.numeric(!is.na(res_unc_cepa_sel$pval) && res_unc_cepa_sel$pval <= 0.05)
 
       # === Conditional Selective Inference Test ===
       res_sel_cond <- tryCatch({
@@ -203,18 +205,18 @@ for (n_idx in seq_along(N_set)) {
         sim_error_log[["epa_clustered_selective_cond"]] <<- e$message
         return(list(pval = NA))
       })
-      rej_sel_cond <- as.numeric(!is.na(res_sel_cond$pval) && res_sel_cond$pval <= 0.05)
+      rej_cond_cepa_sel <- as.numeric(!is.na(res_sel_cond$pval) && res_sel_cond$pval <= 0.05)
 
-      c(rej_epa, rej_clus, rej_epa_cond, rej_clus_cond,
-        rej_naive, rej_naive_cond,
-        rej_split, rej_split_cond,
-        rej_sel, rej_sel_cond,
-        list(sim_error_log))
+      c(rej_unc_oepa_known, rej_cond_oepa_known,
+        rej_unc_cepa_known, rej_cond_cepa_known,
+        rej_unc_cepa_naive, rej_cond_cepa_naive,
+        rej_unc_cepa_split, rej_cond_cepa_split,
+        rej_unc_cepa_sel,   rej_cond_cepa_sel)
     }
 
     # Separate results and error logs
     res_mat <- do.call(rbind, lapply(res, function(x) x[1:10]))
-    error_log[[paste0("N", N, "_T", T_eval)]] <- lapply(res, function(x) x[[11]])
+    print(res_mat)
 
     results_overall[n_idx, t_idx]   <- mean(res_mat[, 1], na.rm = TRUE)
     results_clustered[n_idx, t_idx] <- mean(res_mat[, 2], na.rm = TRUE)
@@ -235,11 +237,11 @@ for (n_idx in seq_along(N_set)) {
 cat("\nOverall EPA Rejection Rates:\n")
 print(round(results_overall, 3))
 
-cat("\nClustered EPA Rejection Rates:\n")
-print(round(results_clustered, 3))
-
 cat("\nConditional Overall EPA Rejection Rates:\n")
 print(round(results_overall_conditional, 3))
+
+cat("\nClustered EPA Rejection Rates:\n")
+print(round(results_clustered, 3))
 
 cat("\nConditional Clustered EPA Rejection Rates:\n")
 print(round(results_clustered_conditional, 3))
@@ -262,5 +264,30 @@ print(round(results_selective, 3))
 cat("\nConditional Selective Inference Clustered EPA Rejection Rates:\n")
 print(round(results_selective_conditional, 3))
 
-cat("\n\n==== ERROR LOG ====\n")
-print(error_log)
+# # Install openxlsx if not already installed
+# if (!requireNamespace("openxlsx", quietly = TRUE)) install.packages("openxlsx")
+# library(openxlsx)
+# 
+# # Arrange result matrices into a 5x2 list matrix
+# result_names <- c(
+#   "results_overall", "results_overall_conditional",
+#   "results_clustered", "results_clustered_conditional",
+#   "results_naive", "results_naive_conditional",
+#   "results_split", "results_split_conditional",
+#   "results_selective", "results_selective_conditional"
+# )
+# result_matrices <- mget(result_names)
+# 
+# result_grid <- matrix(result_matrices, nrow = 5, ncol = 2, byrow = TRUE,
+#                       dimnames = list(
+#                         c("overall", "known", "naive", "split", "selective"),
+#                         c("unconditional", "conditional")
+#                       ))
+# 
+# # Export each matrix to a separate sheet in an Excel file
+# wb <- createWorkbook()
+# for (i in seq_along(result_names)) {
+#   addWorksheet(wb, result_names[i])
+#   writeData(wb, result_names[i], result_matrices[[i]])
+# }
+# saveWorkbook(wb, file = here("Tools", "clusteredEPA", "Results", "simulation_results.xlsx"), overwrite = TRUE)

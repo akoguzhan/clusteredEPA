@@ -188,10 +188,7 @@ epa_clustered_split <- function(df, id, time, Z_names,
     lrv_par = lrv_par
   )
 
-  return(list(
-    clustering = gamma_R,
-    epa_test = test_res
-  ))
+  return(c(list(clustering = gamma_R), unlist(test_res) ))
 }
 
 #' Selective Inference for Clustered EPA
@@ -225,8 +222,8 @@ epa_clustered_selective <- function(
     K = NULL,
     Kmax = NULL,
     pairs = NULL,
-    pcombine_fun = "pharmonic",
-    method = "H2",
+    pcombine_fun = "pmean",
+    method = "A",
     order_k = NULL,
     r = NULL,
     epi = NULL,
@@ -397,5 +394,5 @@ GWtest <- function(d_t, x_t = NULL, max_lag = 0) {
   df <- ncol(X)
   pval <- 1 - pchisq(stat, df)
   
-  return(list(statistic = as.numeric(stat), p_value = as.numeric(pval), S_hat = S_hat))
+  return(list(statistic = as.numeric(stat), pval = as.numeric(pval), S_hat = S_hat))
 }
