@@ -1,7 +1,7 @@
 #rm(list = ls())
 
-#devtools::install("C:/Users/og7051ak/Nextcloud/Codes for Papers/Tests with Unknown Clusters/Tools/PanelKmeansInference")
-#devtools::install("C:/Users/og7051ak/Nextcloud/Codes for Papers/Tests with Unknown Clusters/Tools/clusteredEPA")
+devtools::load_all("C:/Users/og7051ak/Nextcloud/Codes for Papers/Tests with Unknown Clusters/Tools/PanelKmeansInference")
+devtools::load_all("C:/Users/og7051ak/Nextcloud/Codes for Papers/Tests with Unknown Clusters/Tools/clusteredEPA")
 
 library(dplyr)
 library(here)
@@ -13,7 +13,7 @@ N_set <- c(80, 120, 160, 200)
 T_eval_set <- c(20, 50, 100, 150)
 N_set <- c(80)
 T_eval_set <- c(20)
-n_sim <- 100
+n_sim <- 5
 burn <- 50
 lrv <- "EWC"
 lrv_par <- NULL
