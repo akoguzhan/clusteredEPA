@@ -7,7 +7,7 @@
 #' @param prop Proportion of time periods for R sample
 #' @param maxlag Lags to remove from R sample
 #'
-#' @return List with matrices and aligned id/time: Z_R, Z_P, id_R, id_P, time_R, time_P, P, Tobs
+#' @return List with matrices and aligned id/time: Z_Tr, Z_Te, id_Tr, id_Te, time_Tr, time_Te, P, Tobs
 #'
 #' @keywords internal
 #' 
@@ -21,30 +21,30 @@ split_panel_matrix <- function(Z, id, time, prop = 0.5, maxlag = 0) {
   
   # Estimate and prediction splits
   library(dplyr)
-  data_R <- df %>% dplyr::group_by(id) %>% dplyr::slice_head(prop = prop)
-  data_P <- dplyr::anti_join(df, data_R, by = c("id", "time"))
+  data_Tr <- df %>% dplyr::group_by(id) %>% dplyr::slice_head(prop = prop)
+  data_Te <- dplyr::anti_join(df, data_Tr, by = c("id", "time"))
   
   # Trim maxlag from R
   if (maxlag > 0) {
-    data_R <- data_R %>% dplyr::group_by(id) %>% dplyr::slice(1:(dplyr::n() - maxlag))
+    data_Tr <- data_Tr %>% dplyr::group_by(id) %>% dplyr::slice(1:(dplyr::n() - maxlag))
   }
   
   # Extract matrices and aligned ids
-  Z_R <- as.matrix(data_R[, 1:(ncol(Z))])
-  Z_P <- as.matrix(data_P[, 1:(ncol(Z))])
-  id_R <- data_R$id
-  id_P <- data_P$id
-  time_R <- data_R$time
-  time_P <- data_P$time
-  P <- length(unique(time_P))
+  Z_Tr <- as.matrix(data_Tr[, 1:(ncol(Z))])
+  Z_Te <- as.matrix(data_Te[, 1:(ncol(Z))])
+  id_Tr <- data_Tr$id
+  id_Te <- data_Te$id
+  time_Tr <- data_Tr$time
+  time_Te <- data_Te$time
+  P <- length(unique(time_Te))
   
   return(list(
-    Z_R = Z_R,
-    id_R = id_R,
-    time_R = time_R,
-    Z_P = Z_P,
-    id_P = id_P,
-    time_P = time_P,
+    Z_Tr = Z_Tr,
+    id_Tr = id_Tr,
+    time_Tr = time_Tr,
+    Z_Te = Z_Te,
+    id_Te = id_Te,
+    time_Te = time_Te,
     P = P,
     Tobs = Tobs
   ))

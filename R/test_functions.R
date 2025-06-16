@@ -11,9 +11,9 @@
 #'
 #' @return A list with:
 #'   \describe{
-#'     \item{S_oepa}{Long-run variance estimator.}
-#'     \item{W_oepa}{Wald test statistic.}
-#'     \item{p_oepa}{P-value of the test.}
+#'     \item{S}{Long-run variance estimator.}
+#'     \item{W}{Wald test statistic.}
+#'     \item{pval}{P-value of the test.}
 #'   }
 #' @export
 overall_EPA_test <- function(Z, id, time, lrv, lrv_par) {
@@ -40,26 +40,25 @@ overall_EPA_test <- function(Z, id, time, lrv, lrv_par) {
 
   # Test statistic and p-value
   if (identical(lrv, "NeweyWest")) {
-    S_oepa <- NeweyWest(Zbar_Nt, lrv_par)
+    S <- NeweyWest(Zbar_Nt, lrv_par)
     # Use Cholesky-based inversion for numerical stability
-    S_inv <- chol2inv(chol(S_oepa))
-    W_oepa <- as.numeric(Tobs * t(mu_hat_oepa) %*% S_inv %*% mu_hat_oepa)
-    p_oepa <- pchisq(W_oepa, df = P, lower.tail = FALSE)
+    S_inv <- chol2inv(chol(S))
+    W <- as.numeric(Tobs * t(mu_hat_oepa) %*% S_inv %*% mu_hat_oepa)
+    pval <- pchisq(W, df = P, lower.tail = FALSE)
   } else if (identical(lrv, "EWC")) {
     EWC_res <- EWC(Zbar_Nt, lrv_par)
-    S_oepa <- EWC_res$S
+    S <- EWC_res$S
     lrv_par <- EWC_res$lrv_par
     adj_term <- ((lrv_par - P + 1) / lrv_par) / P
-
     # Use Cholesky-based inversion for numerical stability
-    S_inv <- chol2inv(chol(S_oepa))
-    W_oepa <- as.numeric(adj_term * Tobs * t(mu_hat_oepa) %*% S_inv %*% mu_hat_oepa)
-    p_oepa <- pf(W_oepa, df1 = P, df2 = lrv_par - P + 1, lower.tail = FALSE)
+    S_inv <- chol2inv(chol(S))
+    W <- as.numeric(adj_term * Tobs * t(mu_hat_oepa) %*% S_inv %*% mu_hat_oepa)
+    pval <- pf(W, df1 = P, df2 = lrv_par - P + 1, lower.tail = FALSE)
   } else {
     stop("Invalid 'lrv' value. Use 'NeweyWest' or 'EWC'.")
   }
   
-  return(list(S_oepa = S_oepa, W_oepa = W_oepa, p_oepa = p_oepa))
+  return(list(S = S, W = W, pval = pval))
 }
 
 #' Clustered EPA (C-EPA) Test with Known Group Memberships
@@ -116,23 +115,23 @@ epa_clustered_known <- function(Z, id, time, gamma, lrv = "EWC", lrv_par = NULL)
   mu_hat <- colMeans(Z_by_group)
   
   if (lrv == "NeweyWest") {
-    Omega <- NeweyWest(Z_by_group, lrv_par = lrv_par)
-    Omega_inv <- tryCatch(chol2inv(chol(Omega)), error = function(e) stop("Omega is not positive definite."))
-    W <- as.numeric(Tobs * t(mu_hat) %*% Omega_inv %*% mu_hat)
+    S <- NeweyWest(Z_by_group, lrv_par = lrv_par)
+    S_inv <- tryCatch(chol2inv(chol(S)), error = function(e) stop("S is not positive definite."))
+    W <- as.numeric(Tobs * t(mu_hat) %*% S_inv %*% mu_hat)
     pval <- pchisq(W, df = KP, lower.tail = FALSE)
   } else if (lrv == "EWC") {
     EWC_res <- EWC(Z_by_group, lrv_par = lrv_par)
-    Omega <- EWC_res$S
+    S <- EWC_res$S
     lrv_par <- EWC_res$lrv_par
     adj_term <- ((lrv_par - KP + 1) / lrv_par) / KP
-    Omega_inv <- tryCatch(chol2inv(chol(Omega)), error = function(e) stop("Omega is not positive definite."))
-    W <- as.numeric(adj_term * Tobs * t(mu_hat) %*% Omega_inv %*% mu_hat)
+    S_inv <- tryCatch(chol2inv(chol(S)), error = function(e) stop("S is not positive definite."))
+    W <- as.numeric(adj_term * Tobs * t(mu_hat) %*% S_inv %*% mu_hat)
     pval <- pf(W, df1 = KP, df2 = lrv_par - KP + 1, lower.tail = FALSE)
   } else {
     stop("Unknown lrv. Use 'EWC' or 'NeweyWest'.")
   }
   
-  return(list(W = W, pval = pval))
+  return(list(W = W, S = S, pval = pval))
 }
 
 #' Split-Sample Clustered EPA (matrix interface)
@@ -149,40 +148,46 @@ epa_clustered_known <- function(Z, id, time, gamma, lrv = "EWC", lrv_par = NULL)
 #'
 #' @return List with cluster assignments and test results from P
 #' @export 
-epa_clustered_split <- function(Z, id, time,
-                                K, prop = 0.5,
-                                lrv = "EWC", lrv_par = NULL,
-                                Ninit = 10, iter.max = 10) {
+epa_clustered_split <- function(
+  Z, id, time,
+  K = NULL,
+  Kmax = NULL,
+  prop = 0.5,
+  lrv = "EWC",
+  lrv_par = NULL,
+  Ninit = 10,
+  iter.max = 10) {
+                                  
   # Step 1: Split matrices into R and P sets
   split <- split_panel_matrix(Z, id = id, time = time, prop = prop)
-  Z_R <- split$Z_R
-  Z_P <- split$Z_P
-  id_R <- split$id_R
-  id_P <- split$id_P
-  time_P <- split$time_P
-  time_R <- split$time_R
+  Z_Tr <- split$Z_Tr
+  Z_Te <- split$Z_Te
+  id_Tr <- split$id_Tr
+  id_Te <- split$id_Te
+  time_Tr <- split$time_Tr
+  time_Te <- split$time_Te
 
   # Step 2: Run k-means clustering on R sample
-  km_res <- panel_kmeans_estimation(Z = Z_R, id = id_R, time = time_R, K = K,
+  km_res <- panel_kmeans_estimation(Z = Z_Tr, id = id_Tr, time = time_Tr, K = K, Kmax = Kmax,
                                     Ninit = Ninit, iter.max = iter.max)
-  gamma_R <- km_res$final_cluster
+  gamma_Tr <- km_res$final_cluster
 
   # Step 3: Map cluster assignments from R to P by id
-  id_map <- setNames(gamma_R, unique(id_R))
-  gamma_P <- id_map[as.character(unique(id_P))]
-  if (any(is.na(gamma_P))) stop("Some units in P were not found in R clustering.")
+  id_map <- setNames(gamma_Tr, unique(id_Tr))
+  gamma_Te <- id_map[as.character(unique(id_Te))]
+  if (any(is.na(gamma_Te))) stop("Some units in P were not found in R clustering.")
 
   # Step 4: Run clustered EPA test on P using clusters from R
   test_res <- epa_clustered_known(
-    Z = Z_P,
-    id = id_P,
-    time = time_P,
-    gamma = gamma_P,
+    Z = Z_Te,
+    id = id_Te,
+    time = time_Te,
+    gamma = gamma_Te,
     lrv = lrv,
     lrv_par = lrv_par
   )
-
-  return(c(list(clustering = gamma_R), unlist(test_res)))
+  
+  return(append(list(clustering = gamma_Tr),test_res))
 }
 
 #' Selective Inference for Clustered EPA
@@ -212,22 +217,22 @@ epa_clustered_split <- function(Z, id, time,
 #' @return List with all pairwise p-values, overall p-value, and selective p-value.
 #' @export 
 epa_clustered_selective <- function(
-    Z, id, time,
-    K = NULL,
-    Kmax = NULL,
-    pairs = NULL,
-    pcombine_fun = "pGridIU",
-    method = NULL,
-    order_k = NULL,
-    r = NULL,
-    r_min = 1.05,
-    r_max = 50,
-    n_grid = 25,
-    epi = NULL,
-    lrv = "EWC",
-    lrv_par = NULL,
-    Ninit = 10,
-    iter.max = 10
+  Z, id, time,
+  K = NULL,
+  Kmax = NULL,
+  pairs = NULL,
+  pcombine_fun = "pGridIU",
+  method = NULL,
+  order_k = NULL,
+  r = NULL,
+  r_min = 1.05,
+  r_max = 50,
+  n_grid = 25,
+  epi = NULL,
+  lrv = "EWC",
+  lrv_par = NULL,
+  Ninit = 10,
+  iter.max = 10
 ) {
   # 3. Pairwise cluster p-values (with flexible combination)
   homo_res <- panel_homogeneity_test(
@@ -248,11 +253,11 @@ epa_clustered_selective <- function(
 
   pairwise_pvals <- homo_res$pairwise_pvalues
   pairs_out <- homo_res$pairs
-  pval_combined = homo_res$pvalue_combination
+  pval_combined = homo_res$pvalue_combination$min_p
 
   # 4. Overall EPA test p-value
   oepa <- overall_EPA_test(Z = Z, id = id, time = time, lrv = lrv, lrv_par = lrv_par)
-  overall_pval <- oepa$p_oepa
+  overall_pval <- oepa$pval
 
   # 5. Combine all p-values (pairwise + overall)
   all_pvals <- c(as.numeric(pairwise_pvals), overall_pval)
@@ -277,13 +282,9 @@ epa_clustered_selective <- function(
     pairwise_pvalues = pairwise_pvals,
     pairs = pairs_out,
     overall_pval = overall_pval,
-    selective_pval = selective_pval,
-    pcombine_fun = pcombine_fun,
-    method = method,
-    pval_combined_pairwise = pval_combined,
-    cluster_assignments = gamma
-    # estimated_k_means = estimated_k_means,
-    # OmegaHat = OmegaHat
+    hom_test_pval = pval_combined,
+    pval = selective_pval$min_p,
+    clustering = homo_res$clustering
   ))
 }
 
