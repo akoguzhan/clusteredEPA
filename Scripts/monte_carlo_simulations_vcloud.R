@@ -35,32 +35,27 @@ completed_keys <- lapply(all_results, function(x) paste(x$N, x$T, x$d, sep = ","
 progress_total <- length(N_set) * length(T_eval_set) * length(d_vals)
 progress_counter <- 0
 
-for (N in N_set) {
-  gamma <- rep(NA, N)
-  cut1 <- floor(N / 4)
-  cut2 <- floor(N / 2)
-  gamma[1:cut1] <- 1
-  gamma[(cut1 + 1):cut2] <- 2
-  gamma[(cut2 + 1):N] <- 3
-
-  for (T_eval in T_eval_set) {
-    id_vec <- rep(1:N, each = T_eval)
-    time_vec <- rep(1:T_eval, times = N)
-
-    for (d in d_vals) {
+for (d in d_vals) {
+  for (N in N_set) {
+    for (T_eval in T_eval_set) {
       key <- paste(N, T_eval, d, sep = ",")
       if (key %in% completed_keys) {
         next
       }
-
       set.seed(N + T_eval * 100 + round(d * 10000))
 
-      progress_counter <- progress_counter + 1
-      cat(sprintf("(%d/%d) Running N = %d, T = %d, d = %.3f\n", 
-                  progress_counter, progress_total, N, T_eval, d))
-
+      gamma <- rep(NA, N)
+      cut1 <- floor(N / 4)
+      cut2 <- floor(N / 2)
+      gamma[1:cut1] <- 1
+      gamma[(cut1 + 1):cut2] <- 2
+      gamma[(cut2 + 1):N] <- 3
+      id_vec <- rep(1:N, each = T_eval)
+      time_vec <- rep(1:T_eval, times = N)
       delta_vec <- d + d * c(-0.05, -0.1, 0.15)
 
+      progress_counter <- progress_counter + 1
+      cat(sprintf("(%d/%d) Running N = %d, T = %d, d = %.3f\n", progress_counter, progress_total, N, T_eval, d))
       n_cores <- max(1, detectCores(logical = FALSE) - 1)
       cl <- makeCluster(n_cores)
       clusterExport(cl, varlist = ls(), envir = environment())

@@ -158,7 +158,7 @@ epa_clustered_split <- function(
   Ninit = 10,
   iter.max = 10) {
                                   
-  # Step 1: Split matrices into R and P sets
+  # Split matrices into R and P sets
   split <- split_panel_matrix(Z, id = id, time = time, prop = prop)
   Z_Tr <- split$Z_Tr
   Z_Te <- split$Z_Te
@@ -167,17 +167,17 @@ epa_clustered_split <- function(
   time_Tr <- split$time_Tr
   time_Te <- split$time_Te
 
-  # Step 2: Run k-means clustering on R sample
+  # Run k-means clustering on R sample
   km_res <- panel_kmeans_estimation(Z = Z_Tr, id = id_Tr, time = time_Tr, K = K, Kmax = Kmax,
                                     Ninit = Ninit, iter.max = iter.max)
   gamma_Tr <- km_res$final_cluster
 
-  # Step 3: Map cluster assignments from R to P by id
+  # Map cluster assignments from R to P by id
   id_map <- setNames(gamma_Tr, unique(id_Tr))
   gamma_Te <- id_map[as.character(unique(id_Te))]
   if (any(is.na(gamma_Te))) stop("Some units in P were not found in R clustering.")
 
-  # Step 4: Run clustered EPA test on P using clusters from R
+  # Run clustered EPA test on P using clusters from R
   test_res <- epa_clustered_known(
     Z = Z_Te,
     id = id_Te,
@@ -221,46 +221,36 @@ epa_clustered_selective <- function(
   K = NULL,
   Kmax = NULL,
   pairs = NULL,
-  pcombine_fun = "pGridIU",
-  method = NULL,
-  order_k = NULL,
-  r = NULL,
-  r_min = 1.05,
-  r_max = 50,
-  n_grid = 25,
-  epi = NULL,
+  pcombine_fun = "Genmean_neq",
+  r = -20,
   lrv = "EWC",
   lrv_par = NULL,
   Ninit = 10,
   iter.max = 10
 ) {
-  # 3. Pairwise cluster p-values (with flexible combination)
+  # Pairwise cluster p-values (with flexible combination)
   homo_res <- panel_homogeneity_test(
     Z = Z,
     id = id,
     time = time,
     K = K,
     Kmax = Kmax,
+    lrv = lrv, lrv_par = lrv_par,
     pairs = pairs,
     pcombine_fun = pcombine_fun,
-    method = method,
-    order_k = order_k,
-    r = r,
-    r_min = 1.05,
-    r_max = 50,
-    n_grid = 25
+    r = r
   )
 
   pairwise_pvals <- homo_res$pairwise_pvalues
   pairs_out <- homo_res$pairs
-  pval_combined = homo_res$pvalue_combination$min_p
+  pval_combined = homo_res$pval
 
-  # 4. Overall EPA test p-value
+  # Overall EPA test p-value
   oepa <- overall_EPA_test(Z = Z, id = id, time = time, lrv = lrv, lrv_par = lrv_par)
   overall_pval <- oepa$pval
 
-  # 5. Combine all p-values (pairwise + overall)
-  all_pvals <- c(as.numeric(pairwise_pvals), overall_pval)
+  # Combine all p-values (pairwise + overall)
+  all_pvals <- c(pairwise_pvals, overall_pval)
   names(all_pvals) <- c(
     paste0("pair_", sapply(pairs_out, function(x) paste(x, collapse = "_"))),
     "overall"
@@ -269,12 +259,12 @@ epa_clustered_selective <- function(
   # Use the same combination method as for pairwise, but now on all p-values
   selective_pval <- switch(
     pcombine_fun,
-    pmean     = pmerge::pmean(p = all_pvals, r = r, dependence = method),
-    porder    = pmerge::porder(p = all_pvals, k = order_k),
-    pSimes    = pmerge::pSimes(p = all_pvals, method = method),
-    pharmonic = pmerge::pharmonic(p = all_pvals, method = method),
-    pCauchy   = cauchy_combine(all_pvals),
-    pGridIU   = grid_iu_test(all_pvals, r_min = r_min, r_max = r_max, n_grid = n_grid),
+    Geomean     = Geomean_pcombine(all_pvals),
+    Genmean     = Genmean_pcombine(all_pvals, r = r),
+    Genmean_neq = Genmean_rneg_pcombine(all_pvals, r = r),
+    iu          = iu_pcombine(all_pvals, r = r),
+    bonferroni  = bonferroni_pcombine(all_pvals),
+    cauchy      = cauchy_pcombine(all_pvals),
     stop("Invalid pcombine_fun specified.")
   )
 
@@ -283,7 +273,7 @@ epa_clustered_selective <- function(
     pairs = pairs_out,
     overall_pval = overall_pval,
     hom_test_pval = pval_combined,
-    pval = selective_pval$min_p,
+    pval = selective_pval,
     clustering = homo_res$clustering
   ))
 }

@@ -17,7 +17,7 @@ library(pbapply)
 N_set <- c(80, 120, 160)
 T_eval_set <- c(20, 50, 100, 200)
 d_vals <- c(0, 0.125, 0.25, 0.375, 0.5)
-n_sim <- 3
+n_sim <- 2000
 burn <- 10
 lrv <- "EWC"
 lrv_par <- NULL
@@ -30,25 +30,21 @@ all_results <- list()
 progress_total <- length(N_set) * length(T_eval_set) * length(d_vals)
 progress_counter <- 0
 
-for (N in N_set) {
-  gamma <- rep(NA, N)
-  cut1 <- floor(N / 4)
-  cut2 <- floor(N / 2)
-  gamma[1:cut1] <- 1
-  gamma[(cut1 + 1):cut2] <- 2
-  gamma[(cut2 + 1):N] <- 3
-  
-  for (T_eval in T_eval_set) {
-    id_vec <- rep(1:N, each = T_eval)
-    time_vec <- rep(1:T_eval, times = N)
-    
-    for (d in d_vals) {
-      progress_counter <- progress_counter + 1
-      cat(sprintf("(%d/%d) Running N = %d, T = %d, d = %.3f\n", 
-                  progress_counter, progress_total, N, T_eval, d))
-      
+for (d in d_vals) {
+  for (N in N_set) {
+    for (T_eval in T_eval_set) {
+      gamma <- rep(NA, N)
+      cut1 <- floor(N / 4)
+      cut2 <- floor(N / 2)
+      gamma[1:cut1] <- 1
+      gamma[(cut1 + 1):cut2] <- 2
+      gamma[(cut2 + 1):N] <- 3
+      id_vec <- rep(1:N, each = T_eval)
+      time_vec <- rep(1:T_eval, times = N)
       delta_vec <- d + d * c(-0.05, -0.1, 0.15)
-      
+
+      progress_counter <- progress_counter + 1
+      cat(sprintf("(%d/%d) Running N = %d, T = %d, d = %.3f\n", progress_counter, progress_total, N, T_eval, d))
       n_cores <- detectCores(logical = FALSE)
       cl <- makeCluster(n_cores-1)
       clusterExport(cl, varlist = ls(), envir = environment())
@@ -84,15 +80,45 @@ for (N in N_set) {
           naive_cond = clusteredEPA(df, "DL", "X", "id", "time", test = "epa_clustered_known", gamma = panel_kmeans_estimation(cbind(DL, X), id_vec, time_vec, Kmax = 5, n_cores = 1)$final_cluster, lrv = lrv, lrv_par = lrv_par),
           split = clusteredEPA(df, "DL", NULL, "id", "time", Kmax = 5, test = "epa_clustered_split", prop = 0.2, lrv = lrv, lrv_par = lrv_par),
           split_cond = clusteredEPA(df, "DL", "X", "id", "time", Kmax = 5, test = "epa_clustered_split", prop = 0.2, lrv = lrv, lrv_par = lrv_par),
-          selective = clusteredEPA(df, "DL", NULL, "id", "time", Kmax = 5, test = "epa_clustered_selective", pcombine_fun = "pGridIU", lrv = lrv, lrv_par = lrv_par),
-          selective_cond = clusteredEPA(df, "DL", "X", "id", "time", Kmax = 5, test = "epa_clustered_selective", pcombine_fun = "pGridIU", lrv = lrv, lrv_par = lrv_par),
-          overall = clusteredEPA(df, "DL", NULL, "id", "time", test = "overall_EPA_test", lrv = lrv, lrv_par = lrv_par),
-          overall_cond = clusteredEPA(df, "DL", "X", "id", "time", test = "overall_EPA_test", lrv = lrv, lrv_par = lrv_par)
+          selective = clusteredEPA(df, "DL", NULL, "id", "time", Kmax = 5, test = "epa_clustered_selective", pcombine_fun = "Genmean_neq", lrv = lrv, lrv_par = lrv_par),
+          selective_cond = clusteredEPA(df, "DL", "X", "id", "time", Kmax = 5, test = "epa_clustered_selective", pcombine_fun = "Genmean_neq", lrv = lrv, lrv_par = lrv_par)
         )
         
-        rejection_rates <- c(sapply(out_all, function(x) as.numeric(x$pval <= 0.05)), out_all[["selective"]]$hom_test_pval, out_all[["selective_cond"]]$hom_test_pval)
-        names(rejection_rates)[(length(rejection_rates)-1):length(rejection_rates)] <- c("hom", "hom_cond")
+        rejection_rates <- c(sapply(out_all, function(x) as.numeric(x$pval <= 0.05)),
+                             as.numeric(out_all[["selective"]]$hom_test_pval <= 0.05),
+                             as.numeric(out_all[["selective_cond"]]$hom_test_pval <= 0.05),
+                             as.numeric(out_all[["selective"]]$overall_pval <= 0.05),
+                             as.numeric(out_all[["selective_cond"]]$overall_pval <= 0.05))
+        names(rejection_rates)[(length(rejection_rates)-3):length(rejection_rates)] <- c("hom", "hom_cond", "overall", "overall_cond")
         
+        allpvalues <- c(out_all[["selective"]]$pairwise_pvalues,out_all[["selective"]]$overall_pval)
+        allpvalues_cond <- c(out_all[["selective_cond"]]$pairwise_pvalues,out_all[["selective_cond"]]$overall_pval)
+        
+        # pval_combs <- as.numeric(
+        #                 c(cauchy_pcombine(allpvalues), cauchy_pcombine(allpvalues_cond),
+        #                 bonferroni_pcombine(allpvalues), bonferroni_pcombine(allpvalues_cond),
+        #                 iu_pcombine(allpvalues), iu_pcombine(allpvalues_cond),
+        #                 Genmean_rneg_pcombine(allpvalues), Genmean_rneg_pcombine(allpvalues_cond),
+        #                 Genmean_pcombine(allpvalues), Genmean_pcombine(allpvalues_cond),
+        #                 Geomean_pcombine(allpvalues), Geomean_pcombine(allpvalues_cond),
+        #                 bonferroni_compound_pcombine(allpvalues, bonferroni_pcombine, cauchy_pcombine), bonferroni_compound_pcombine(allpvalues_cond, bonferroni_pcombine, cauchy_pcombine),
+        #                 bonferroni_compound_pcombine(allpvalues, bonferroni_pcombine, iu_pcombine), bonferroni_compound_pcombine(allpvalues_cond, bonferroni_pcombine, iu_pcombine),
+        #                 bonferroni_compound_pcombine(allpvalues, bonferroni_pcombine, Genmean_rneg_pcombine), bonferroni_compound_pcombine(allpvalues_cond, bonferroni_pcombine, Genmean_rneg_pcombine),
+        #                 bonferroni_compound_pcombine(allpvalues, bonferroni_pcombine, Genmean_pcombine), bonferroni_compound_pcombine(allpvalues_cond, bonferroni_pcombine, Genmean_pcombine),
+        #                 bonferroni_compound_pcombine(allpvalues, bonferroni_pcombine, Geomean_pcombine), bonferroni_compound_pcombine(allpvalues_cond, bonferroni_pcombine, Geomean_pcombine))
+        #                 <= 0.05)
+        # names(pval_combs) <- c("cauchy_pcombine","cauchy_cond_pcombine",
+        #                        "bonferroni_pcombine","bonferroni_cond_pcombine",
+        #                        "iu_pcombine","iu_cond_pcombine",
+        #                        "Genmean_rneg_pcombine","Genmean_rneg_cond_pcombine",
+        #                        "Genmean_pcombine","Genmean_cond_pcombine",
+        #                        "Geomean_pcombine","Geomean_cond_pcombine",
+        #                        "cauchy_bonf_pcombine","cauchy_bonf_cond_pcombine",
+        #                        "iu_bonf_pcombine","iu_bonf_cond_pcombine",
+        #                        "Genmean_rneg_bonf_pcombine","Genmean_rneg_bonf_cond_pcombine",
+        #                        "Genmean_bonf_pcombine","Genmean_bonf_cond_pcombine",
+        #                        "Geomean_bonf_pcombine","Geomean_bonf_cond_pcombine")
+
         extract_clustering_stats <- function(obj, gamma) {
           if (is.null(obj) || is.null(obj$clustering)) {
             return(c(rand = NA, recovery = NA, avg_K = NA))
@@ -128,15 +154,17 @@ for (N in N_set) {
         select(N, T, d, known, known_cond, naive, naive_cond, split, split_cond, selective, selective_cond)
       results_misc[[length(results_misc) + 1]] <- res_df %>% 
         select(N, T, d, overall, overall_cond, hom, hom_cond, starts_with("rand_"), starts_with("recovery_"), starts_with("avg_K_"))
-      all_results[[length(all_results) + 1]] <- res_df
+      # results_pcomb <- res_df %>% 
+      #   select(N, T, d, overall, overall_cond, hom, hom_cond, ends_with("_pcombine"))
+      # all_results[[length(all_results) + 1]] <- res_df
+      
+      final_clustered <- bind_rows(results_clustered)
+      final_misc <- bind_rows(results_misc)
+      # final_pcomb <- bind_rows(results_pcomb)
+      
+      write.xlsx(final_clustered, here("Tools", "clusteredEPA", "Results", "results_clustered.xlsx"))
+      write.xlsx(final_misc, here("Tools", "clusteredEPA", "Results", "results_misc.xlsx"))
+      # write.xlsx(final_pcomb, here("Tools", "clusteredEPA", "Results", "results_pcomb.xlsx"))
     }
   }
 }
-
-final_clustered <- bind_rows(results_clustered)
-final_misc <- bind_rows(results_misc)
-final_all <- bind_rows(all_results)
-
-write.xlsx(final_clustered, here("Tools", "clusteredEPA", "Results", "results_clustered.xlsx"))
-write.xlsx(final_misc, here("Tools", "clusteredEPA", "Results", "results_misc.xlsx"))
-write.xlsx(final_all, here("Tools", "clusteredEPA", "Results", "results_full_raw.xlsx"))
