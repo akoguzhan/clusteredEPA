@@ -27,7 +27,7 @@ generate_forecast_simulation_data <- function(N, Tobs, burn,
   
   rho_i <- rho_vec[gamma]
   delta_i <- delta_vec[gamma]
-  
+  print(delta_i)
   sigma2_V_i <- alpha^2 * (1 - rho_i)^2 + delta_i
   if (any(sigma2_V_i <= 0)) stop("Resulting forecast variance is non-positive. Adjust delta_vec.")
   

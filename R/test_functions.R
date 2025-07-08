@@ -206,10 +206,7 @@ epa_clustered_split <- function(
 #' @param Kmax Optional; if provided, perform BIC-based selection from 2 to Kmax clusters.
 #' @param pairs Optional matrix of cluster index pairs to test (each row: c(k1, k2)). If NULL, all unique pairs are tested.
 #' @param pcombine_fun Function to combine p-values: "pmean", "porder", "pSimes", "pharmonic", "pCauchy".
-#' @param method Variant used by pmerge (e.g., "H1", "I", "G", etc.).
-#' @param order_k Used by porder.
 #' @param r Used by pmean.
-#' @param epi Used by pCauchy.
 #' @param lrv Character; "EWC" or "NeweyWest" for overall_EPA_test.
 #' @param lrv_par Integer; lag (NW) or B (EWC) for overall_EPA_test.
 #' @param Ninit Integer; number of KMeans initializations.
@@ -275,6 +272,68 @@ epa_clustered_selective <- function(
     hom_test_pval = pval_combined,
     pval = selective_pval,
     clustering = homo_res$clustering
+  ))
+}
+
+#' Selective Inference for Clustered EPA — Mean Zero Version (Mode 2)
+#'
+#' Tests whether each cluster mean is zero and combines the resulting p-values.
+#'
+#' @param Z NT x P matrix of loss differentials or moments.
+#' @param id Vector of unit identifiers (length NT).
+#' @param time Vector of time identifiers (length NT).
+#' @param K Integer; number of clusters for k-means. Required unless Kmax is provided.
+#' @param Kmax Optional; if provided, perform BIC-based selection from 2 to Kmax clusters.
+#' @param pcombine_fun Function to combine p-values: "Geomean", "Genmean", "Genmean_neq", "iu", "bonferroni", "cauchy".
+#' @param r Parameter used by Genmean, Genmean_neq, and iu methods.
+#' @param lrv Character; method for long-run variance ("EWC" or "NeweyWest").
+#' @param lrv_par Optional integer parameter for long-run variance estimator.
+#' @param Ninit Number of KMeans initializations.
+#' @param iter.max Maximum iterations for KMeans.
+#' @param n_cores Number of cores for parallel computing.
+#'
+#' @return List containing individual p-values, combined p-value, clustering, and number of clusters.
+#' @export
+epa_clustered_selective_mode2 <- function(
+  Z, id, time,
+  K = NULL,
+  Kmax = NULL,
+  pcombine_fun = "Genmean_neq",
+  r = -20,
+  lrv = "EWC",
+  lrv_par = NULL,
+  Ninit = 10,
+  iter.max = 10
+) {
+  # Pairwise cluster p-values (with flexible combination)
+  bycluster_res <- panel_bycluster_tests(
+    Z = Z, id = id, time = time,
+    K = K,
+    Kmax = Kmax,
+    Ninit = Ninit,
+    iter.max = iter.max,
+    lrv = lrv,
+    lrv_par = lrv_par,
+    n_cores = 1
+  )
+
+  bycluster_pvals <- bycluster_res$bycluster_pvals
+
+  # Use the same combination method as for pairwise, but now on all p-values
+  selective_pval <- switch(
+    pcombine_fun,
+    Geomean     = Geomean_pcombine(bycluster_pvals),
+    Genmean     = Genmean_pcombine(bycluster_pvals, r = r),
+    Genmean_neq = Genmean_rneg_pcombine(bycluster_pvals, r = r),
+    iu          = iu_pcombine(bycluster_pvals, r = r),
+    bonferroni  = bonferroni_pcombine(bycluster_pvals),
+    cauchy      = cauchy_pcombine(bycluster_pvals),
+    stop("Invalid pcombine_fun specified.")
+  )
+
+  return(list(
+    pval = selective_pval,
+    clustering = bycluster_res$clustering
   ))
 }
 

@@ -11,7 +11,7 @@
 #'
 #' @keywords internal
 #' 
-split_panel_matrix <- function(Z, id, time, prop = 0.5, maxlag = 0) {
+split_panel_matrix <- function(Z, id, time, prop = 0.5, maxlag = NULL) {
   df <- data.frame(Z)
   df$id <- id
   df$time <- time
@@ -25,8 +25,11 @@ split_panel_matrix <- function(Z, id, time, prop = 0.5, maxlag = 0) {
   data_Te <- dplyr::anti_join(df, data_Tr, by = c("id", "time"))
   
   # Trim maxlag from R
+  if (is.null(maxlag)) {
+	maxlag <- floor(sqrt(prop * Tobs))
+  }
   if (maxlag > 0) {
-    data_Tr <- data_Tr %>% dplyr::group_by(id) %>% dplyr::slice(1:(dplyr::n() - maxlag))
+    data_Te <- data_Te %>% dplyr::group_by(id) %>% dplyr::slice((maxlag + 1):(dplyr::n()))
   }
   
   # Extract matrices and aligned ids

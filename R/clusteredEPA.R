@@ -8,7 +8,7 @@
 #' @param H Character vector; names of conditioning variables in df (optional).
 #' @param id Character; name of the unit identifier column.
 #' @param time Character; name of the time identifier column.
-#' @param test Character; which test to run: "overall_EPA_test", "epa_clustered_known", "epa_clustered_split", or "epa_clustered_selective" (default).
+#' @param test Character; which test to run: "overall_EPA_test", "epa_clustered_known", "epa_clustered_split", "epa_clustered_selective", or "epa_clustered_selective_mode2".
 #' @param ... Additional arguments passed to the selected test function.
 #'
 #' @return Output of the selected test function.
@@ -36,7 +36,7 @@ clusteredEPA <- function(df, DL, H = NULL, id, time, test = "epa_clustered_selec
   time_vec <- df[[time]]
 
   # Dispatch to the selected test
-  test <- match.arg(test, c("overall_EPA_test", "epa_clustered_known", "epa_clustered_split", "epa_clustered_selective"))
+  test <- match.arg(test, c("overall_EPA_test", "epa_clustered_known", "epa_clustered_split", "epa_clustered_selective", "epa_clustered_selective_mode2"))
 
   if (test == "overall_EPA_test") {
     res <- overall_EPA_test(Z = Z, id = id_vec, time = time_vec, ...)
@@ -46,6 +46,8 @@ clusteredEPA <- function(df, DL, H = NULL, id, time, test = "epa_clustered_selec
     res <- epa_clustered_split(Z = Z, id = id_vec, time = time_vec, ...)
   } else if (test == "epa_clustered_selective") {
     res <- epa_clustered_selective(Z = Z, id = id_vec, time = time_vec, ...)
+  } else if (test == "epa_clustered_selective_mode2") {
+    res <- epa_clustered_selective_mode2(Z = Z, id = id_vec, time = time_vec, ...)
   } else {
     stop("Unknown test type.")
   }
