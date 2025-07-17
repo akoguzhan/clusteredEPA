@@ -13,24 +13,25 @@
 #' @return A list with Y, forecast_1, and forecast_2 matrices (N x (Tobs - 1)).
 #' @export
 generate_forecast_simulation_data <- function(N, Tobs, burn,
-                                              alpha = 1,
+                                              alpha = c(1, 1, 1),
                                               rho_vec = c(0.2, 0.3, 0.4),
                                               gamma,
                                               phi = 0.2,
                                               lambda = 0.2,
                                               delta_vec = c(0, -0.1, -0.2)) {
+  if (length(alpha) != 3) stop("alpha must be a vector of length 3.")                                
   if (length(rho_vec) != 3) stop("rho_vec must be a vector of length 3.")
   if (length(gamma) != N) stop("gamma must be a vector of length N with values in {1,2,3}.")
   if (length(delta_vec) != 3) stop("delta_vec must be a vector of length 3.")
   
   T_total <- burn + Tobs
-  
+  alpha_i <- alpha[gamma]
   rho_i <- rho_vec[gamma]
   delta_i <- delta_vec[gamma]
-  print(delta_i)
-  sigma2_V_i <- alpha^2 * (1 - rho_i)^2 + delta_i
+
+  sigma2_V_i <- alpha_i^2 * (1 - rho_i)^2 + delta_i
   if (any(sigma2_V_i <= 0)) stop("Resulting forecast variance is non-positive. Adjust delta_vec.")
-  
+
   sigma2_xi_i <- sigma2_V_i * (1 - phi^2) - lambda^2
   if (any(sigma2_xi_i < 0)) stop("Choose smaller lambda or phi; some cluster variances invalid.")
   
@@ -39,7 +40,7 @@ generate_forecast_simulation_data <- function(N, Tobs, burn,
   U <- matrix(rnorm(N * T_total), N, T_total)
   
   for (t in 2:T_total) {
-    Y[, t] <- alpha * (1 - rho_i) + rho_i * Y[, t - 1] + U[, t]
+    Y[, t] <- alpha_i * (1 - rho_i) + rho_i * Y[, t - 1] + U[, t]
   }
   
   Y <- Y[, (burn + 1):T_total]  # Remove burn-in
@@ -59,9 +60,9 @@ generate_forecast_simulation_data <- function(N, Tobs, burn,
   V <- V[, (burn + 1):(burn + Tobs - 1)]
   
   # === Forecasts ===
-  forecast_1 <- alpha * (1 - rho_i) + rho_i * Y_lag + V
+  forecast_1 <- alpha_i * (1 - rho_i) + rho_i * Y_lag + V
   forecast_2 <- rho_i * Y_lag
-  
+
   return(list(
     Y = Y_outcome,
     forecast_1 = forecast_1,

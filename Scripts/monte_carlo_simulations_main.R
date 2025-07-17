@@ -1,9 +1,6 @@
 rm(list = ls())
 
 # === Load Packages and Project Code ===
-devtools::load_all("C:/Users/og7051ak/Nextcloud/Codes for Papers/Tests with Unknown Clusters/Tools/PanelKmeansInference")
-devtools::load_all("C:/Users/og7051ak/Nextcloud/Codes for Papers/Tests with Unknown Clusters/Tools/clusteredEPA")
-
 library(dplyr)
 library(here)
 library(openxlsx)
@@ -15,8 +12,8 @@ library(pbapply)
 
 # === Simulation Parameters ===
 N_set <- c(80, 120, 160)
-T_eval_set <- c(20, 50, 100, 200)
-d_vals <- c(0, 0.125, 0.25, 0.375, 0.5)
+T_eval_set <- c(50, 100, 200)
+d_vals <- rev(c(0, 0.125, 0.25, 0.375, 0.5))
 n_sim <- 1000
 burn <- 10
 lrv <- "EWC"
@@ -37,7 +34,7 @@ for (d in d_vals) {
     N_loop <- 80
     T_loop <- c(50, 200)
     delta_list <- list(
-      `overall_fails` = d / 2 + d * c(-1.2, -0.8, 1),
+      `overall_fails` = d/2 + d * c(-1.2, -0.8, 1),
       `overall_holds` = d * c(-1.2, -0.8, 1)
     )
   }
@@ -61,15 +58,16 @@ for (d in d_vals) {
         clusterSetRNGStream(cl, iseed = 20250708)
         clusterExport(cl, varlist = ls(), envir = environment())
         clusterEvalQ(cl, {
-          devtools::load_all("C:/Users/og7051ak/Nextcloud/Codes for Papers/Tests with Unknown Clusters/Tools/PanelKmeansInference")
-          devtools::load_all("C:/Users/og7051ak/Nextcloud/Codes for Papers/Tests with Unknown Clusters/Tools/clusteredEPA")
+          library(here)
+          devtools::load_all(here("Tools", "clusteredEPA"))
+          devtools::load_all(here("Tools", "PanelKmeansInference"))
           library(mclust)
         })
         
         sim_fun <- function(sim) {
           sim_data <- generate_forecast_simulation_data(
             N, Tobs = T_eval + 2, burn,
-            alpha = 1, rho_vec = c(0.1, 0.2, 0.3), gamma = gamma,
+            alpha = c(1, 1, 1), rho_vec = c(0.1, 0.2, 0.3), gamma = gamma,
             phi = 0.2, lambda = 0.2, delta_vec = delta_vec
           )
           
@@ -90,8 +88,8 @@ for (d in d_vals) {
             known_cond = clusteredEPA(df, "DL", "X", "id", "time", test = "epa_clustered_known", gamma = gamma, lrv = lrv, lrv_par = lrv_par),
             naive = clusteredEPA(df, "DL", NULL, "id", "time", test = "epa_clustered_known", gamma = panel_kmeans_estimation(DL, id_vec, time_vec, Kmax = 5, n_cores = 1)$final_cluster, lrv = lrv, lrv_par = lrv_par),
             naive_cond = clusteredEPA(df, "DL", "X", "id", "time", test = "epa_clustered_known", gamma = panel_kmeans_estimation(cbind(DL, DL * X), id_vec, time_vec, Kmax = 5, n_cores = 1)$final_cluster, lrv = lrv, lrv_par = lrv_par),
-            split = clusteredEPA(df, "DL", NULL, "id", "time", Kmax = 5, test = "epa_clustered_split", prop = 0.2, lrv = lrv, lrv_par = lrv_par),
-            split_cond = clusteredEPA(df, "DL", "X", "id", "time", Kmax = 5, test = "epa_clustered_split", prop = 0.2, lrv = lrv, lrv_par = lrv_par),
+            split = clusteredEPA(df, "DL", NULL, "id", "time", Kmax = 5, test = "epa_clustered_split", prop = 0.3, lrv = lrv, lrv_par = lrv_par),
+            split_cond = clusteredEPA(df, "DL", "X", "id", "time", Kmax = 5, test = "epa_clustered_split", prop = 0.3, lrv = lrv, lrv_par = lrv_par),
             selective = clusteredEPA(df, "DL", NULL, "id", "time", Kmax = 5, test = "epa_clustered_selective", pcombine_fun = "Genmean_neq", lrv = lrv, lrv_par = lrv_par),
             selective_cond = clusteredEPA(df, "DL", "X", "id", "time", Kmax = 5, test = "epa_clustered_selective", pcombine_fun = "Genmean_neq", lrv = lrv, lrv_par = lrv_par),
             selective_mode2 = clusteredEPA(df, "DL", NULL, "id", "time", Kmax = 5, test = "epa_clustered_selective_mode2", pcombine_fun = "Genmean_neq", lrv = lrv, lrv_par = lrv_par),
@@ -105,7 +103,55 @@ for (d in d_vals) {
                                as.numeric(out_all[["selective_cond"]]$overall_pval <= 0.05))
           names(rejection_rates)[(length(rejection_rates)-3):length(rejection_rates)] <- c("hom", "hom_cond", "overall", "overall_cond")
           
-          out_df <- data.frame(N = N, Tobs = T_eval, d = d, variant = variant, as.list(rejection_rates))
+          allpvalues <- c(out_all[["selective"]]$pairwise_pvalues, out_all[["selective"]]$overall_pval)
+          allpvalues_cond <- c(out_all[["selective_cond"]]$pairwise_pvalues, out_all[["selective_cond"]]$overall_pval)
+          
+          pval_combs <- as.numeric(
+            c(cauchy_pcombine(allpvalues), cauchy_pcombine(allpvalues_cond),
+              bonferroni_pcombine(allpvalues), bonferroni_pcombine(allpvalues_cond),
+              iu_pcombine(allpvalues), iu_pcombine(allpvalues_cond),
+              Genmean_rneg_pcombine(allpvalues), Genmean_rneg_pcombine(allpvalues_cond),
+              Genmean_pcombine(allpvalues), Genmean_pcombine(allpvalues_cond),
+              Geomean_pcombine(allpvalues), Geomean_pcombine(allpvalues_cond),
+              bonferroni_compound_pcombine(allpvalues, bonferroni_pcombine, cauchy_pcombine), bonferroni_compound_pcombine(allpvalues_cond, bonferroni_pcombine, cauchy_pcombine),
+              bonferroni_compound_pcombine(allpvalues, bonferroni_pcombine, iu_pcombine), bonferroni_compound_pcombine(allpvalues_cond, bonferroni_pcombine, iu_pcombine),
+              bonferroni_compound_pcombine(allpvalues, bonferroni_pcombine, Genmean_rneg_pcombine), bonferroni_compound_pcombine(allpvalues_cond, bonferroni_pcombine, Genmean_rneg_pcombine),
+              bonferroni_compound_pcombine(allpvalues, bonferroni_pcombine, Genmean_pcombine), bonferroni_compound_pcombine(allpvalues_cond, bonferroni_pcombine, Genmean_pcombine),
+              bonferroni_compound_pcombine(allpvalues, bonferroni_pcombine, Geomean_pcombine), bonferroni_compound_pcombine(allpvalues_cond, bonferroni_pcombine, Geomean_pcombine))
+            <= 0.05)
+          
+          names(pval_combs) <- c("cauchy_pcombine", "cauchy_cond_pcombine",
+                                 "bonferroni_pcombine", "bonferroni_cond_pcombine",
+                                 "iu_pcombine", "iu_cond_pcombine",
+                                 "Genmean_rneg_pcombine", "Genmean_rneg_cond_pcombine",
+                                 "Genmean_pcombine", "Genmean_cond_pcombine",
+                                 "Geomean_pcombine", "Geomean_cond_pcombine",
+                                 "cauchy_bonf_pcombine", "cauchy_bonf_cond_pcombine",
+                                 "iu_bonf_pcombine", "iu_bonf_cond_pcombine",
+                                 "Genmean_rneg_bonf_pcombine", "Genmean_rneg_bonf_cond_pcombine",
+                                 "Genmean_bonf_pcombine", "Genmean_bonf_cond_pcombine",
+                                 "Geomean_bonf_pcombine", "Geomean_bonf_cond_pcombine")
+          
+          extract_clustering_stats <- function(obj, gamma) {
+            if (is.null(obj) || is.null(obj$clustering)) {
+              return(c(rand = NA, recovery = NA, avg_K = NA))
+            }
+            cl <- obj$clustering
+            rand <- mclust::adjustedRandIndex(cl, gamma)
+            recovery <- same_cl(cl, gamma, 3)
+            Khat <- length(unique(cl))
+            avg_K <- Khat
+            return(c(rand = rand, recovery = recovery, avg_K = avg_K))
+          }
+          
+          clustering_stats <- c(
+            setNames(extract_clustering_stats(out_all$split, gamma), c("rand_split", "recovery_split", "avg_K_split")),
+            setNames(extract_clustering_stats(out_all$split_cond, gamma), c("rand_split_cond", "recovery_split_cond", "avg_K_split_cond")),
+            setNames(extract_clustering_stats(out_all$selective, gamma), c("rand_selective", "recovery_selective", "avg_K_selective")),
+            setNames(extract_clustering_stats(out_all$selective_cond, gamma), c("rand_selective_cond", "recovery_selective_cond", "avg_K_selective_cond"))
+          )
+          
+          out_df <- data.frame(N = N, Tobs = T_eval, d = d, variant = variant, as.list(rejection_rates), as.list(clustering_stats), as.list(pval_combs))
           return(out_df)
         }
         
@@ -118,8 +164,12 @@ for (d in d_vals) {
         res_df <- cbind(variant, numeric_means)
         
         results_clustered[[length(results_clustered) + 1]] <- res_df %>% select(N, Tobs, d, variant, known, known_cond, naive, naive_cond, split, split_cond, selective, selective_cond, selective_mode2, selective_mode2_cond)
+        results_misc[[length(results_misc) + 1]] <- res_df %>% select(N, Tobs, d, variant, overall, overall_cond, hom, hom_cond, starts_with("rand_"), starts_with("recovery_"), starts_with("avg_K_"))
+        results_pcomb[[length(results_pcomb) + 1]] <- res_df %>% select(N, Tobs, d, variant, ends_with("_pcombine"))
         
         write.xlsx(bind_rows(results_clustered), here("Tools", "clusteredEPA", "Results", "results_clustered.xlsx"))
+        write.xlsx(bind_rows(results_misc), here("Tools", "clusteredEPA", "Results", "results_misc.xlsx"))
+        write.xlsx(bind_rows(results_pcomb), here("Tools", "clusteredEPA", "Results", "results_pcomb.xlsx"))
       }
     }
   }
