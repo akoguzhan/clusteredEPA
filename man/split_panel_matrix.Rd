@@ -4,7 +4,7 @@
 \alias{split_panel_matrix}
 \title{Split a balanced panel matrix into estimation (R) and evaluation (P) samples}
 \usage{
-split_panel_matrix(Z, id, time, prop = 0.5, maxlag = 0)
+split_panel_matrix(Z, id, time, prop = 0.5, maxlag = NULL)
 }
 \arguments{
 \item{Z}{Matrix of dimension (N*T) x K}
@@ -13,14 +13,18 @@ split_panel_matrix(Z, id, time, prop = 0.5, maxlag = 0)
 
 \item{time}{Numeric vector of length N*T (time id)}
 
-\item{prop}{Proportion of time periods for R sample}
+\item{prop}{Proportion of time periods for the training sample}
 
-\item{maxlag}{Lags to remove from R sample}
+\item{maxlag}{Number of initial periods removed from the testing sample (default
+\code{floor(sqrt(prop * T))})}
 }
 \value{
-List with matrices and aligned id/time: Z_R, Z_P, id_R, id_P, time_R, time_P, P, Tobs
+List with matrices and aligned id/time: Z_Tr, Z_Te, id_Tr, id_Te, time_Tr, time_Te,
+  P (number of testing periods), Tobs
 }
 \description{
-Split a balanced panel matrix into estimation (R) and evaluation (P) samples
+Sorts the panel by unit and time, assigns the first \code{prop} share of each unit's
+periods to the training sample and the rest to the testing sample, and drops the first
+\code{maxlag} periods of each unit from the testing sample.
 }
 \keyword{internal}

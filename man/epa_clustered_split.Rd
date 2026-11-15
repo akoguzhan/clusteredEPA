@@ -2,45 +2,58 @@
 % Please edit documentation in R/test_functions.R
 \name{epa_clustered_split}
 \alias{epa_clustered_split}
-\title{Split-Sample Clustered EPA}
+\title{Clustered EPA (C-EPA) Test with Sample Splitting}
 \usage{
 epa_clustered_split(
-  df,
+  Z,
   id,
   time,
-  Z_names,
-  K,
+  K = NULL,
+  Kmax = NULL,
   prop = 0.5,
-  method = "EWC",
-  param = NULL,
+  lrv = "EWC",
+  lrv_par = NULL,
   Ninit = 10,
-  iter.max = 10
+  iter.max = 100,
+  kappa = 1.5,
+  maxlag = NULL,
+  cB = NULL,
+  demean = "global",
+  init_type = "forgy"
 )
 }
 \arguments{
-\item{df}{Balanced panel data.frame}
+\item{Z}{Matrix (NT x P) of loss differentials or moment conditions.}
 
-\item{id}{Character; unit identifier column name}
+\item{id}{Vector of length NT for unit identifiers.}
 
-\item{time}{Character; time identifier column name}
+\item{time}{Vector of length NT for time identifiers.}
 
-\item{Z_names}{Character vector; variable names for clustering}
+\item{K, Kmax}{Number of clusters or largest number for the IC.}
 
-\item{K}{Integer; number of clusters for KMeans}
+\item{prop}{Training proportion \eqn{\gamma}.}
 
-\item{prop}{Numeric; proportion of time periods for R (training) sample}
+\item{lrv}{"EWC" (default) or "NeweyWest".}
 
-\item{method}{Character; "EWC" or "NeweyWest" for LRV estimator}
+\item{lrv_par}{Number of cosines (EWC) or lag (NW). Default for EWC: \code{choose_B} on
+\eqn{\bar Z_t} with lower bound \eqn{KP+4}.}
 
-\item{param}{Integer; lag (NW) or B (EWC)}
+\item{Ninit, iter.max, kappa, init_type}{Panel Kmeans settings.}
 
-\item{Ninit}{Integer; number of KMeans initializations}
+\item{maxlag}{Gap between the samples (default \eqn{\lfloor\sqrt{prop\,T}\rfloor}).}
 
-\item{iter.max}{Integer; max iterations in KMeans}
+\item{cB}{Optional constant \eqn{c_B}.}
+
+\item{demean}{"global" or "local" demeaning for the long-run variance (EWC).}
 }
 \value{
-List with cluster assignments and test results from P
+A list with clustering, W, S, pval, lrv_par.
 }
 \description{
-Split-Sample Clustered EPA
+Clusters are estimated on the first \code{prop} share of the periods (training
+sample, K chosen by the IC if \code{Kmax} is given), the first \code{maxlag} periods of the
+remaining sample are dropped (gap), and the C-EPA test with known clusters is computed on the
+testing sample. B is chosen on the testing sample unless \code{lrv_par} is given. Columns of
+Z that are identically zero in the training sample (e.g. the product with a dummy that is zero
+there) are not used to estimate the clusters.
 }

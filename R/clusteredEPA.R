@@ -8,10 +8,11 @@
 #' @param H Character vector; names of conditioning variables in df (optional).
 #' @param id Character; name of the unit identifier column.
 #' @param time Character; name of the time identifier column.
-#' @param test Character; which test to run: "overall_EPA_test", "epa_clustered_known", "epa_clustered_split", "epa_clustered_selective", or "epa_clustered_selective_mode2".
+#' @param test Character; which test to run: "overall_EPA_test", "epa_clustered_known", "epa_clustered_split", "epa_clustered_selective" or "epa_clustered_selective_mode2".
 #' @param ... Additional arguments passed to the selected test function.
 #'
 #' @return Output of the selected test function.
+#' @import PanelKmeansInference
 #' @export
 clusteredEPA <- function(df, DL, H = NULL, id, time, test = "epa_clustered_selective", ...) {
   # Input checks

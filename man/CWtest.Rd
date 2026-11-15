@@ -2,20 +2,22 @@
 % Please edit documentation in R/test_functions.R
 \name{CWtest}
 \alias{CWtest}
-\title{Clark and West (2007) MSPE-Adjusted Forecast Comparison Test}
+\title{Clark-West Test}
 \usage{
 CWtest(y1, y2, y, lrv_par = 0)
 }
 \arguments{
-\item{y1}{Numeric vector of forecasts from model 1 (length T).}
+\item{y1, y2}{Forecasts.}
 
-\item{y2}{Numeric vector of forecasts from model 2 (length T).}
+\item{y}{Realizations.}
 
-\item{y}{Numeric vector of actual observations (length T).}
+\item{lrv_par}{NW lag.}
 }
 \value{
-A list with elements \code{T} (test statistic) and \code{pval} (p-value).
+A list with T and pval.
 }
 \description{
-Implements the Clark and West (2007, JOE) test to compare forecast accuracy between nested models.
+Clark-West test of equal predictive accuracy for nested models: the adjusted loss
+differential \eqn{f_t = (y_t - y_{1t})^2 - [(y_t - y_{2t})^2 - (y_{1t} - y_{2t})^2]} is tested with
+a t statistic using the Newey-West variance, and the p-value is \eqn{1 - \Phi(T)}.
 }

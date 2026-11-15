@@ -1,13 +1,19 @@
 # Handles the creation of R and P subsamples from a balanced panel dataset
 #' Split a balanced panel matrix into estimation (R) and evaluation (P) samples
 #'
+#' @description Sorts the panel by unit and time, assigns the first \code{prop} share of each unit's
+#' periods to the training sample and the rest to the testing sample, and drops the first
+#' \code{maxlag} periods of each unit from the testing sample.
+#'
 #' @param Z Matrix of dimension (N*T) x K
 #' @param id Numeric vector of length N*T (unit id)
 #' @param time Numeric vector of length N*T (time id)
-#' @param prop Proportion of time periods for R sample
-#' @param maxlag Lags to remove from R sample
+#' @param prop Proportion of time periods for the training sample
+#' @param maxlag Number of initial periods removed from the testing sample (default
+#'   \code{floor(sqrt(prop * T))})
 #'
-#' @return List with matrices and aligned id/time: Z_Tr, Z_Te, id_Tr, id_Te, time_Tr, time_Te, P, Tobs
+#' @return List with matrices and aligned id/time: Z_Tr, Z_Te, id_Tr, id_Te, time_Tr, time_Te,
+#'   P (number of testing periods), Tobs
 #'
 #' @keywords internal
 #' 

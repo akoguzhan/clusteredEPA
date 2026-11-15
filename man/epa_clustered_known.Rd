@@ -4,7 +4,16 @@
 \alias{epa_clustered_known}
 \title{Clustered EPA (C-EPA) Test with Known Group Memberships}
 \usage{
-epa_clustered_known(Z, id, time, gamma, lrv = "EWC", lrv_par = NULL)
+epa_clustered_known(
+  Z,
+  id,
+  time,
+  gamma,
+  lrv = "EWC",
+  lrv_par = NULL,
+  cB = NULL,
+  demean = "global"
+)
 }
 \arguments{
 \item{Z}{Matrix (NT x P) of loss differentials or moment conditions.}
@@ -13,19 +22,22 @@ epa_clustered_known(Z, id, time, gamma, lrv = "EWC", lrv_par = NULL)
 
 \item{time}{Vector of length NT for time identifiers.}
 
-\item{gamma}{Vector of length N (number of units), giving cluster assignments (values in {1, ..., K}).}
+\item{gamma}{Vector of length N (units in increasing id order), cluster assignments in 1..K.}
 
-\item{lrv}{Character; "EWC" (default) or "NeweyWest".}
+\item{lrv}{"EWC" (default) or "NeweyWest".}
 
-\item{lrv_par}{Integer; lag (NeweyWest) or number of spectral windows (EWC).}
+\item{lrv_par}{Number of cosines (EWC) or lag (NW). Default for EWC: \code{choose_B} on
+\eqn{\bar Z_t} with lower bound \eqn{KP+4}.}
+
+\item{cB}{Optional constant \eqn{c_B}.}
+
+\item{demean}{"global" or "local" demeaning for the long-run variance (EWC).}
 }
 \value{
-A list with elements:
-  \describe{
-    \item{W}{Wald statistic}
-    \item{pval}{P-value}
-  }
+A list with W, S, pval, lrv_par.
 }
 \description{
-Clustered EPA (C-EPA) Test with Known Group Memberships
+Wald test of a zero mean of the stacked cluster averages
+\eqn{(\bar Z_{1t}',\dots,\bar Z_{Kt}')'} for given clusters, with the OS (EWC) long-run variance
+and F critical values, or Newey-West and chi-squared critical values.
 }

@@ -8,51 +8,99 @@ epa_clustered_selective(
   Z,
   id,
   time,
-  OmegaHat,
-  estimated_k_means,
+  K = NULL,
+  Kmax = NULL,
   pairs = NULL,
-  pcombine_fun = "pharmonic",
-  method = "H1",
-  order_k = NULL,
-  r = NULL,
-  epi = NULL,
+  pcombine_fun = "Genmean_neq",
+  r = -20,
   lrv = "EWC",
-  lrv_par = NULL
+  lrv_par = NULL,
+  cB = NULL,
+  Ninit = 10,
+  iter.max = 100,
+  kappa = 1.5,
+  metric = "xi",
+  conditioning = "partition",
+  condition_K = TRUE,
+  condition_starts = TRUE,
+  ref = "chi",
+  w_bonf = 0.5,
+  demean = "global",
+  init_type = "forgy",
+  fit = NULL,
+  cluster_specific = FALSE
 )
 }
 \arguments{
 \item{Z}{NT x P matrix of loss differentials or moments.}
 
-\item{id}{Vector of unit identifiers (length NT).}
+\item{id, time}{NT vectors of unit and time identifiers.}
 
-\item{time}{Vector of time identifiers (length NT).}
+\item{K}{Number of clusters (alternative to \code{Kmax}).}
 
-\item{OmegaHat}{Long-run variance matrix (GK x GK).}
+\item{Kmax}{Largest number of clusters for the IC.}
 
-\item{estimated_k_means}{Output from panel_kmeans_estimation().}
+\item{pairs}{Optional matrix of cluster pairs.}
 
-\item{pairs}{Optional matrix of cluster index pairs to test (each row: c(k1, k2)). If NULL, all unique pairs are tested.}
+\item{pcombine_fun}{Merging function (default "Genmean_neq").}
 
-\item{pcombine_fun}{Function to combine p-values: "pmean", "porder", "pSimes", "pharmonic", "pCauchy".}
+\item{r}{Order of the generalized mean (default -20).}
 
-\item{method}{Variant used by pmerge (e.g., "H1", "I", "G", etc.).}
+\item{lrv}{Only "EWC" is supported.}
 
-\item{order_k}{Used by porder.}
+\item{lrv_par}{Number of cosines B (default: \code{choose_B} with lower bound \eqn{K_{max}P+4}).}
 
-\item{r}{Used by pmean.}
+\item{cB}{Optional constant \eqn{c_B}.}
 
-\item{epi}{Used by pCauchy.}
+\item{Ninit}{Number of random initializations.}
 
-\item{lrv}{Character; "EWC" or "NeweyWest" for overall_EPA_test.}
+\item{iter.max}{Maximum number of Lloyd iterations.}
 
-\item{lrv_par}{Integer; lag (NW) or B (EWC) for overall_EPA_test.}
+\item{kappa}{IC tuning constant.}
+
+\item{metric}{"xi" (default), "shrink" or "euclidean" (see \code{selective_test}).}
+
+\item{conditioning}{"partition" (default: condition on the selected partition and K_IC only)
+or "paths" (see \code{selective_test}).}
+
+\item{condition_K, condition_starts}{Options for \code{conditioning = "paths"}.}
+
+\item{ref}{Reference law of the truncated statistic: "chi" (default, \eqn{\chi_q}) or "F"
+(Hotelling law with B degrees of freedom; see \code{selective_test}).}
+
+\item{w_bonf}{Weight of the homogeneity p-value in the weighted Bonferroni combination.}
+
+\item{demean}{"global" or "local" demeaning for the long-run variance.}
+
+\item{init_type}{"forgy" (default) or "partition" (see \code{pk_cluster}).}
+
+\item{fit}{Optional precomputed \code{pk_fit} object for the same Z.}
+
+\item{cluster_specific}{Also compute the cluster-specific selective tests (default FALSE; K
+additional truncation sets).}
 }
 \value{
-List with all pairwise p-values, overall p-value, and selective p-value.
+A list with pairwise_pvalues, pairs, overall_pval, hom_test_pval (merged),
+  joint_hom_pval, joint_cepa_pval, wbonf_pval, pval (\eqn{F_{SI,r}}), clustering, K, B, in_set
+  (diagnostic), fit; with \code{cluster_specific = TRUE} also cluster_pvals, cluster_holm
+  (Holm-adjusted), cluster_holm_pval (smallest adjusted p-value), cluster_centers (K x P) and
+  cluster_sizes (see \code{panel_bycluster_tests}).
 }
 \description{
-Performs selective inference for clustered Equal Predictive Ability (EPA):
-1. Runs panel_homogeneity_test to get all pairwise cluster p-values (with flexible combination).
-2. Runs overall_EPA_test for the global null.
-3. Combines all [K(K-1)/2 + 1] p-values using the specified method (default: pharmonic).
+Selective C-EPA tests with unknown clusters (Section 4 of the paper):
+\enumerate{
+  \item Panel Kmeans with \code{Ninit} random initializations; K fixed or chosen by the IC
+    from 2 to \code{Kmax}.
+  \item Selective p-values of all pairwise equality hypotheses, conditional on the selected
+    partition and \eqn{\hat K_{IC}} (given the data-independent initializations), with the
+    decomposition in the metric of the long-run covariance matrix.
+  \item Homogeneity: merged pairwise p-values (\eqn{F_{homo,r}}) and the joint selective test.
+  \item O-EPA test with the same B.
+  \item C-EPA: \eqn{F_{SI,r}} merging the pairwise and O-EPA p-values (main test, Theorem 2),
+    the joint selective C-EPA test (\eqn{\mathsf R = I_{KP}}, Remark 7) and the weighted
+    Bonferroni combination of the homogeneity and O-EPA p-values (Remark 9).
+  \item Optionally (\code{cluster_specific = TRUE}), the selective tests that each selected
+    cluster mean is zero, with Holm-adjusted p-values (Section 5.3), which identify the clusters
+    for which EPA fails after a rejection.
+}
 }

@@ -2,13 +2,13 @@
 % Please edit documentation in R/generate_panels.r
 \name{generate_forecast_simulation_data}
 \alias{generate_forecast_simulation_data}
-\title{Generate Forecast Simulation Data with Cluster-Specific Forecast Variance Deviations}
+\title{Generate Forecast Simulation Data (Original Design, True Parameters)}
 \usage{
 generate_forecast_simulation_data(
   N,
   Tobs,
   burn,
-  alpha = 1,
+  alpha = c(1, 1, 1),
   rho_vec = c(0.2, 0.3, 0.4),
   gamma,
   phi = 0.2,
@@ -23,13 +23,13 @@ generate_forecast_simulation_data(
 
 \item{burn}{Integer; burn-in length.}
 
-\item{alpha}{Intercept for AR(1) process (default = 1).}
+\item{alpha}{Means of the AR(1) process by cluster (length 3, or a scalar recycled; default 1).}
 
 \item{rho_vec}{Numeric vector of length 3; AR coefficients for 3 clusters.}
 
-\item{gamma}{Integer vector of length N; cluster membership in {1,2,3}.}
+\item{gamma}{Integer vector of length N; cluster membership in 1, 2, 3.}
 
-\item{phi}{AR(1) coefficient for V_{it} innovations.}
+\item{phi}{AR(1) coefficient of the forecast noise \eqn{V_{it}} of Forecaster 1.}
 
 \item{lambda}{Cross-sectional loading of the common shock.}
 
@@ -39,5 +39,6 @@ generate_forecast_simulation_data(
 A list with Y, forecast_1, and forecast_2 matrices (N x (Tobs - 1)).
 }
 \description{
-Generate Forecast Simulation Data with Cluster-Specific Forecast Variance Deviations
+Design of the original Monte Carlo study: the forecasters use the true AR(1)
+parameters; Forecaster 1 adds a noise with cluster-specific variance.
 }

@@ -17,7 +17,7 @@ clusteredEPA(df, DL, H = NULL, id, time, test = "epa_clustered_selective", ...)
 
 \item{time}{Character; name of the time identifier column.}
 
-\item{test}{Character; which test to run: "overall_EPA_test", "epa_clustered_known", "epa_clustered_split", or "epa_clustered_selective" (default).}
+\item{test}{Character; which test to run: "overall_EPA_test", "epa_clustered_known", "epa_clustered_split", "epa_clustered_selective" or "epa_clustered_selective_mode2".}
 
 \item{...}{Additional arguments passed to the selected test function.}
 }

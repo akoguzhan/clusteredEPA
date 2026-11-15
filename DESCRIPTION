@@ -1,13 +1,19 @@
 Package: clusteredEPA
 Type: Package
 Title: Clustered EPA with Unknown Clusters
-Version: 0.1.0
+Version: 0.2.3
 Authors@R: person("Oguzhan", "Akgun", email = "Oguzhan.Akgun@u-bourgogne.fr", role = c("aut", "cre"))
-Description: Testing clustered equal predictive ability with unknown clusters
+Description: Testing clustered equal predictive ability with unknown clusters: predetermined,
+    naive, split-sample and selective C-EPA tests, and joint selective tests (C-EPA for the
+    selected clusters, homogeneity). Simulation designs of the paper.
 Depends: R (>= 3.5.0)
+Suggests:
+    Rcpp
 Imports:
-    PanelKmeansInference
+    PanelKmeansInference,
+    dplyr,
+    stats
 License: MIT
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.2.1
+Config/roxygen2/version: 8.1.0

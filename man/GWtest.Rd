@@ -2,21 +2,22 @@
 % Please edit documentation in R/test_functions.R
 \name{GWtest}
 \alias{GWtest}
-\title{Giacomini and White (2006) Predictive Ability Test}
+\title{Giacomini-White Test}
 \usage{
 GWtest(d_t, x_t = NULL, max_lag = 0)
 }
 \arguments{
-\item{d_t}{A numeric vector of out-of-sample loss differentials (L1 - L2) of length P.}
+\item{d_t}{Loss differential.}
 
-\item{x_t}{Optional matrix or vector of instruments (predictors) to condition on. Defaults to 1 (unconditional test).}
+\item{x_t}{Instruments (default: a constant).}
 
-\item{max_lag}{Integer; lag length for Newey-West LRV estimation.}
+\item{max_lag}{NW lag.}
 }
 \value{
-A list with the test statistic, p-value, and long-run variance estimate.
+A list with statistic, pval, S_hat.
 }
 \description{
-Implements the conditional predictive ability (CPA) test for two competing forecasts
-using the time series of out-of-sample loss differentials and a Newey-West long-run variance estimate.
+Regresses the loss differential on the instruments by least squares and computes
+the Wald statistic \eqn{\hat\beta'\hat S^{-1}\hat\beta}, with \eqn{\hat S} the Newey-West variance
+of \eqn{x_te_t}, and chi-squared p-value with \code{ncol(x_t)} degrees of freedom.
 }

@@ -4,28 +4,33 @@
 \alias{overall_EPA_test}
 \title{Overall Equal Predictive Ability (O-EPA) Test for Panel Data}
 \usage{
-overall_EPA_test(Z, id, time, lrv, lrv_par)
+overall_EPA_test(
+  Z,
+  id,
+  time,
+  lrv = "EWC",
+  lrv_par = NULL,
+  cB = NULL,
+  demean = "global"
+)
 }
 \arguments{
-\item{Z}{NT × P matrix containing loss differential and/or transformed moment columns.}
+\item{Z}{NT x P matrix.}
 
-\item{id}{Vector of unit identifiers (length NT).}
+\item{id, time}{NT vectors.}
 
-\item{time}{Vector of time identifiers (length NT).}
+\item{lrv}{"EWC" (default) or "NeweyWest".}
 
-\item{lrv}{Character: either "NeweyWest" or "EWC" for long-run variance estimation.}
+\item{lrv_par}{Number of cosines B (EWC) or lag (NW). Default for EWC: \code{choose_B}.}
 
-\item{lrv_par}{Numeric tuning parameter: lag (NW) or degrees of freedom (EWC).}
+\item{cB}{Optional constant \eqn{c_B}.}
+
+\item{demean}{"global" or "local" demeaning for the long-run variance (EWC).}
 }
 \value{
-A list with:
-  \describe{
-    \item{S_oepa}{Long-run variance estimator.}
-    \item{W_oepa}{Wald test statistic.}
-    \item{p_oepa}{P-value of the test.}
-  }
+A list with S, W, pval, lrv_par.
 }
 \description{
-Computes the Overall EPA test from NT × P matrix input (panel structure),
-averaging across units for each time period. The function supports both EWC and Newey-West LRV estimators.
+Wald test of a zero mean of the cross-sectional average \eqn{\bar Z_t}, with the OS
+(EWC) long-run variance and F critical values, or Newey-West and chi-squared critical values.
 }
